@@ -47,7 +47,7 @@ export default function ShareJoin() {
 
   return (
     <div className="reader-page" style={{ zoom: scale }}>
-      <ArticleHeader title={info.title} headerColor={info.headerColor} logoUrl={info.logoUrl} />
+      <ArticleHeader title={info.title} header={info} logoUrl={info.logoUrl} />
       <main className="reader">
         {!info.active ? (
           <p className="notice">This link is closed. Contact the person who shared it.</p>

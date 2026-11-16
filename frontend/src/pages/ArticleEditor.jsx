@@ -4,17 +4,14 @@ import { adminApi } from '../api';
 import HeaderBranding from '../components/HeaderBranding';
 import WordEditor from '../components/WordEditor';
 import HtmlEditor from '../components/HtmlEditor';
+import QuestionBuilder from '../components/QuestionBuilder';
+import { defaultHeader, pickHeader } from '../utils/color';
+import { blankQuestion, fromApi, toApi } from '../utils/questionTypes';
 
-const DEFAULT_COUNT = 5;
-const MAX_OPTIONS = 6;
-const DEFAULT_HEADER = '#1D2B38';
-
-const blankOption = () => ({ text: '', isCorrect: false });
-const blankQuestion = (type = 'MCQ') => ({
-  type,
-  text: '',
-  options: type === 'MCQ' ? [blankOption(), blankOption(), blankOption(), blankOption()] : [],
-});
+const FALLBACK_CONFIG = {
+  maxQuestions: 20, defaultQuestions: 5, maxOptions: 20, maxGridRows: 20, maxGridCols: 10,
+  defaultQuizTitle: 'Check your understanding',
+};
 const isEmptyHtml = (h) => !h || (!/<img\s/i.test(h) && !h.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim());
 
 export default function ArticleEditor() {
@@ -23,13 +20,15 @@ export default function ArticleEditor() {
   const navigate = useNavigate();
   const docxRef = useRef(null);
 
-  const [count, setCount] = useState(DEFAULT_COUNT);
+  const [config, setConfig] = useState(FALLBACK_CONFIG);
   const [title, setTitle] = useState('');
   const [contentSource, setContentSource] = useState('WORD');
   const [contentHtml, setContentHtml] = useState('');
-  const [headerColor, setHeaderColor] = useState(DEFAULT_HEADER);
+  const [header, setHeader] = useState(() => defaultHeader());
   const [logo, setLogo] = useState(null); // { assetId, url }
-  const [questions, setQuestions] = useState(() => Array.from({ length: DEFAULT_COUNT }, () => blankQuestion()));
+  const [quizTitle, setQuizTitle] = useState('');
+  const [quizNote, setQuizNote] = useState('');
+  const [questions, setQuestions] = useState(() => Array.from({ length: FALLBACK_CONFIG.defaultQuestions }, () => blankQuestion()));
   const [locked, setLocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -43,27 +42,27 @@ export default function ArticleEditor() {
       try {
         const cfg = await adminApi.config();
         if (cancelled) return;
-        setCount(cfg.questionCount);
+        setConfig({ ...FALLBACK_CONFIG, ...cfg });
         if (isEdit) {
           const a = await adminApi.get(id);
           if (cancelled) return;
           setTitle(a.title);
           setContentSource(a.contentSource);
           setContentHtml(a.contentHtml);
-          setHeaderColor(a.headerColor);
+          setHeader(pickHeader(a));
           setLogo(a.logoAssetId ? { assetId: a.logoAssetId, url: a.logoUrl } : null);
+          setQuizTitle(a.quizTitle || '');
+          setQuizNote(a.quizNote || '');
           setLocked(a.responseCount > 0);
-          setQuestions(a.questions.map((q) => ({
-            type: q.type,
-            text: q.text,
-            options: q.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })),
-          })));
+          setQuestions(a.questions.length ? a.questions.map(fromApi) : [blankQuestion()]);
         } else {
-          setQuestions(Array.from({ length: cfg.questionCount }, () => blankQuestion()));
-          const d = await adminApi.defaults(); // reuse last header colour + logo
+          setQuestions(Array.from({ length: cfg.defaultQuestions || 5 }, () => blankQuestion()));
+          const d = await adminApi.defaults(); // reuse last header look, logo and quiz heading
           if (cancelled) return;
-          setHeaderColor(d.headerColor);
+          setHeader(pickHeader(d));
           setLogo(d.logoAssetId ? { assetId: d.logoAssetId, url: d.logoUrl } : null);
+          setQuizTitle(d.quizTitle || '');
+          setQuizNote(d.quizNote || '');
         }
       } catch (e) {
         if (!cancelled) setError(e.message);
@@ -108,23 +107,6 @@ export default function ArticleEditor() {
     }
   }
 
-  const updateQ = (qi, patch) =>
-    setQuestions((qs) => qs.map((q, i) => (i === qi ? { ...q, ...patch } : q)));
-  const setType = (qi, type) =>
-    updateQ(qi, { type, options: type === 'MCQ' ? [blankOption(), blankOption(), blankOption(), blankOption()] : [] });
-  const updateOpt = (qi, oi, patch) =>
-    setQuestions((qs) => qs.map((q, i) => (i !== qi ? q : {
-      ...q, options: q.options.map((o, j) => (j === oi ? { ...o, ...patch } : o)),
-    })));
-  const markCorrect = (qi, oi) =>
-    setQuestions((qs) => qs.map((q, i) => (i !== qi ? q : {
-      ...q, options: q.options.map((o, j) => ({ ...o, isCorrect: j === oi })),
-    })));
-  const addOpt = (qi) =>
-    setQuestions((qs) => qs.map((q, i) => (i === qi ? { ...q, options: [...q.options, blankOption()] } : q)));
-  const removeOpt = (qi, oi) =>
-    setQuestions((qs) => qs.map((q, i) => (i === qi ? { ...q, options: q.options.filter((_, j) => j !== oi) } : q)));
-
   async function save(e) {
     e.preventDefault();
     setError('');
@@ -136,9 +118,11 @@ export default function ArticleEditor() {
     setSaving(true);
     try {
       const payload = {
-        title, contentHtml, contentSource, headerColor,
+        title, contentHtml, contentSource,
+        ...header,
         logoAssetId: logo ? logo.assetId : null,
-        questions,
+        quizTitle, quizNote,
+        questions: questions.map(toApi),
       };
       if (isEdit) {
         await adminApi.update(id, payload);
@@ -177,9 +161,9 @@ export default function ArticleEditor() {
       <h2 className="section-title">Header</h2>
       <HeaderBranding
         title={title}
-        headerColor={headerColor}
+        header={header}
+        onChange={(patch) => setHeader((h) => ({ ...h, ...patch }))}
         logo={logo}
-        onColorChange={setHeaderColor}
         onLogoChange={setLogo}
       />
 
@@ -230,68 +214,22 @@ export default function ArticleEditor() {
           You can still change the title, header and content.
         </p>
       ) : (
-        <p className="muted">Exactly {count} questions. Multiple choice needs one correct option; written answers are read by you.</p>
+        <p className="muted">
+          Add 1 to {config.maxQuestions} questions of any type. Choice and short-answer questions are scored when you mark the
+          correct answer; other types (rating, scale, grid, date, file…) are collected for you to review.
+        </p>
       )}
 
-      <fieldset disabled={locked} className="questions">
-        {questions.map((q, qi) => (
-          <section key={qi} className="q-card">
-            <div className="q-head">
-              <h3>Question {qi + 1}</h3>
-              <div className="seg" role="radiogroup" aria-label={`Question ${qi + 1} type`}>
-                <button type="button" className={q.type === 'MCQ' ? 'on' : ''} onClick={() => setType(qi, 'MCQ')}>
-                  Multiple choice
-                </button>
-                <button type="button" className={q.type === 'TEXT' ? 'on' : ''} onClick={() => setType(qi, 'TEXT')}>
-                  Written answer
-                </button>
-              </div>
-            </div>
-
-            <textarea
-              className="q-text"
-              placeholder="Type the question"
-              value={q.text}
-              onChange={(e) => updateQ(qi, { text: e.target.value })}
-              rows={2}
-            />
-
-            {q.type === 'MCQ' && (
-              <div className="options">
-                {q.options.map((o, oi) => (
-                  <div className="opt-row" key={oi}>
-                    <label className="correct" title="Mark as correct answer">
-                      <input
-                        type="radio"
-                        name={`correct-${qi}`}
-                        checked={o.isCorrect}
-                        onChange={() => markCorrect(qi, oi)}
-                      />
-                      <span className="sr-only">Correct</span>
-                    </label>
-                    <input
-                      className="opt-input"
-                      placeholder={`Option ${oi + 1}`}
-                      value={o.text}
-                      onChange={(e) => updateOpt(qi, oi, { text: e.target.value })}
-                    />
-                    {q.options.length > 2 && (
-                      <button type="button" className="btn ghost small" onClick={() => removeOpt(qi, oi)}>Remove</button>
-                    )}
-                  </div>
-                ))}
-                <div className="opt-foot">
-                  <span className="muted small">Select the circle next to the correct option.</span>
-                  {q.options.length < MAX_OPTIONS && (
-                    <button type="button" className="btn ghost small" onClick={() => addOpt(qi)}>Add option</button>
-                  )}
-                </div>
-              </div>
-            )}
-            {q.type === 'TEXT' && <p className="muted small">The reader gets a text box for their answer.</p>}
-          </section>
-        ))}
-      </fieldset>
+      <QuestionBuilder
+        questions={questions}
+        setQuestions={setQuestions}
+        quizTitle={quizTitle}
+        setQuizTitle={setQuizTitle}
+        quizNote={quizNote}
+        setQuizNote={setQuizNote}
+        config={config}
+        locked={locked}
+      />
 
       <div className="form-foot">
         <button className="btn primary" disabled={saving}>{saving ? 'Saving…' : 'Save article'}</button>

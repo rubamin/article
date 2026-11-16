@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { adminApi } from '../api';
 import SharePanel from '../components/SharePanel';
 import { downloadCsv, formatDateTime, formatDuration } from '../utils/format';
+import { TYPE_LABEL } from '../utils/questionTypes';
 
 // Accepts lines pasted from Excel (tab separated) or typed as "Name, email, Department"
 function parseRecipients(text) {
@@ -14,6 +15,25 @@ function parseRecipients(text) {
       const [name = '', email = '', department = ''] = line.split(/\t|,/).map((p) => p.trim());
       return { name, email, department };
     });
+}
+
+function AnswerFiles({ files }) {
+  const [err, setErr] = useState('');
+  return (
+    <div className="a-files">
+      {files.map((f) => (
+        <button
+          key={f.fileId}
+          type="button"
+          className="btn ghost small"
+          onClick={(e) => { e.stopPropagation(); setErr(''); adminApi.downloadResponseFile(f.fileId, f.name).catch((x) => setErr(x.message)); }}
+        >
+          ⬇ {f.name}
+        </button>
+      ))}
+      {err && <span className="error small">{err}</span>}
+    </div>
+  );
 }
 
 function RecipientDetail({ recipientId }) {
@@ -61,14 +81,16 @@ function RecipientDetail({ recipientId }) {
           <ol className="answers">
             {data.answers.map((a) => (
               <li key={a.order}>
-                <p className="a-q">{a.question}</p>
-                {a.type === 'MCQ' ? (
-                  <p className={a.isCorrect ? 'ok' : 'bad'}>
-                    {a.selectedOption} {a.isCorrect ? '— correct' : `— correct answer: ${a.correctOption}`}
-                  </p>
+                <p className="a-q">{a.question} <span className="muted small">({TYPE_LABEL[a.type] || a.type})</span></p>
+                {!a.answered ? (
+                  <p className="muted">No answer (optional question)</p>
+                ) : a.files.length ? (
+                  <AnswerFiles files={a.files} />
                 ) : (
-                  <p className="a-text">{a.answerText}</p>
+                  <p className={`a-text ${a.isCorrect === true ? 'is-ok' : a.isCorrect === false ? 'is-bad' : ''}`}>{a.answerText}</p>
                 )}
+                {a.isCorrect === true && <p className="ok small">Correct</p>}
+                {a.isCorrect === false && <p className="bad small">Wrong — correct answer: {a.correctOption}</p>}
               </li>
             ))}
           </ol>
@@ -137,7 +159,7 @@ export default function ArticleReport() {
     const rows = [[
       'Name', 'Email', 'Department', 'Joined via', 'Personal link', 'Times opened', 'First opened', 'Last opened',
       'Time on page (sec)', 'Away time (sec)', 'Times left page', 'Total open time (sec)', 'Max scroll %',
-      'Submitted at', 'MCQ correct', 'MCQ total',
+      'Submitted at', 'Correct answers', 'Scored questions',
     ]];
     report.recipients.forEach((r) => rows.push([
       r.name, r.email, r.department, r.source === 'LINK' ? 'Share link' : 'Invited', r.link, r.openCount,
@@ -224,7 +246,7 @@ export default function ArticleReport() {
                       <td className="num">{r.openCount ? `${r.maxScrollPct}%` : '—'}</td>
                       <td>
                         {r.submittedAt
-                          ? <span className="pill done">{r.mcqCorrect}/{r.mcqTotal} correct</span>
+                          ? <span className="pill done">{r.mcqTotal ? `${r.mcqCorrect}/${r.mcqTotal} correct` : 'Submitted'}</span>
                           : <span className="pill">Pending</span>}
                       </td>
                     </tr>

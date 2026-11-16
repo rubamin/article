@@ -2,7 +2,25 @@
 
 An admin creates articles, gets **one share link per article**, copies or shares it, and sees
 **who opened it, how many times, how long it stayed open, how long they actually read**, how far
-they scrolled, and their answers to the **5 questions** (multiple choice + written).
+they scrolled, and their answers to the article's **questions** (1 to 20, every Google Forms / Microsoft Forms type).
+
+## What's new in v6
+- **A4 page view removed** — the reader has the normal view and Full screen only.
+- **Heading and subheading styling** — heading: background colour, font colour (Auto = readable white/dark), font size 18–72 px.
+  Optional subheading (e.g. the edition line): text, background colour (Auto = same band as the heading), font colour, font size 12–40 px.
+  On phones the sizes shrink so long titles fit. A new article starts with the look of your last article (not the subheading text).
+- **1 to 20 questions** per article (`MAX_QUESTIONS`): add, move up/down, duplicate, delete.
+- **Every question type from Google Forms and Microsoft Forms**: Short answer, Paragraph, Multiple choice (with “Other”),
+  Checkboxes (with “Other”), Dropdown, Ranking, Linear scale, Rating (star / heart / thumbs / number), Net Promoter Score,
+  Likert, Multiple choice grid, Checkbox grid, Date (optionally with time), Time, File upload.
+  Each question: Required on/off, optional description, shuffle option order (choice types).
+- **Scoring**: multiple choice / dropdown (one correct option), checkboxes (all correct options must be picked) and short answer
+  (accepted answers, not case-sensitive) are scored when you mark the correct answer. Leave it unmarked for an opinion question.
+  Other types are collected for you to review. The report shows “x/y correct” or “Submitted” when nothing is scored.
+- **Quiz heading and note** per article (default “Check your understanding”). They stay editable after people have answered.
+- **File upload answers** are stored in the database (`ResponseFiles`); allowed types per question (PDF, image, document,
+  spreadsheet, presentation), 1/5/10 files, 1/5/10 MB (server limit 10 MB). The file's first bytes must match its extension.
+  Download them from the reader's row in the report.
 
 ## What's new in v2
 - **Admin login** (username + password, JWT). Each admin sees only their own articles.
@@ -23,6 +41,8 @@ Run `database/schema.sql`.
 ### Existing database
 From v1: run `database/migrations/002_admin_share_branding.sql` once (in SSMS — it uses `GO`).
 Then (v1 or v2): run `database/migrations/003_away_tracking.sql` once.
+Then: run `database/migrations/004_header_styles_question_types.sql` once (heading styles, quiz heading, question types, file uploads).
+Old articles, questions and answers keep working.
 
 ### API
 ```bash
@@ -51,8 +71,7 @@ Open `http://localhost:5173/admin` and sign in.
   **Total open** (in the row detail) = opened → closed (or last heartbeat).
 
 ## Reader views
-- **Normal** — screen reading column. **A4 page** — the article on A4 sheets (210 × 297 mm) with page numbers, like Word's print layout;
-  on phones the sheets shrink to fit. The choice is remembered on that device.
+- **Normal** — screen reading column.
 - **Full screen** — whole page full screen; tracking and scrolling work the same.
 - Report refreshes every 30 s while open; CSV export opens in Excel (Gujarati/Hindi names safe).
 
@@ -66,8 +85,10 @@ Open `http://localhost:5173/admin` and sign in.
 - Away tracking counts window focus, not eyes: a reader who leaves the article in front and walks away is still "on page".
   If the browser is killed while the reader is away (common on phones), away time since the last beat is lost
   (the leave itself is already recorded). Sessions recorded before migration 003 show no away data.
-- A4 view moves whole blocks (paragraph, table, list) to the next page; it does not split a paragraph across pages.
-  A block taller than one page gets one taller page.
+- Files a reader uploads but removes, or uploads and never submits, stay in `ResponseFiles` until the reader is deleted
+  (files not in the final answers are removed when they submit).
+- No section breaks / branching ("go to section based on answer") and no response validation rules (number, regex) yet.
+- Ranking: the reader orders items with arrow buttons (no drag and drop). An untouched ranking is saved in the shown order.
 - Full screen is not available on iPhone (Safari allows it only for videos); the button is hidden there.
 - Readers who joined through the share link cannot switch to another person on the same device/browser.
 - **Identity is self-declared**: on the share link the reader types their email; nothing verifies it (no OTP/SSO).

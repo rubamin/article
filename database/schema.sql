@@ -1,5 +1,5 @@
 /* Article Tracker - MSSQL schema (full, for a NEW database).
-   Existing database from v1? Run database/migrations/002_admin_share_branding.sql instead.
+   Existing database? Run the files in database/migrations/ you have not run yet (002, 003, 004) instead.
    All times are stored in UTC (SYSUTCDATETIME). */
 
 CREATE TABLE dbo.AdminUsers (
@@ -31,6 +31,14 @@ CREATE TABLE dbo.Articles (
     ContentSource VARCHAR(10) NOT NULL DEFAULT 'HTML' CHECK (ContentSource IN ('HTML','WORD')),
     HeaderColor   CHAR(7) NOT NULL DEFAULT '#1D2B38',
     LogoAssetId   UNIQUEIDENTIFIER NULL REFERENCES dbo.ArticleAssets(AssetId),
+    HeadingColor  CHAR(7) NULL,                       -- NULL = automatic (readable on HeaderColor)
+    HeadingSize   SMALLINT NOT NULL DEFAULT 40,       -- px
+    SubTitle      NVARCHAR(300) NULL,
+    SubColor      CHAR(7) NULL,                       -- NULL = automatic
+    SubBgColor    CHAR(7) NULL,                       -- NULL = same as HeaderColor
+    SubSize       SMALLINT NOT NULL DEFAULT 20,       -- px
+    QuizTitle     NVARCHAR(300) NULL,                 -- NULL = "Check your understanding"
+    QuizNote      NVARCHAR(1000) NULL,
     ShareToken    UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
     IsShareActive BIT NOT NULL DEFAULT 1,
     CreatedBy     INT NULL REFERENCES dbo.AdminUsers(AdminId),
@@ -45,7 +53,13 @@ CREATE TABLE dbo.ArticleQuestions (
     ArticleId    INT NOT NULL REFERENCES dbo.Articles(ArticleId) ON DELETE CASCADE,
     SortOrder    INT NOT NULL,
     QuestionText NVARCHAR(1000) NOT NULL,
-    QuestionType VARCHAR(10) NOT NULL CHECK (QuestionType IN ('MCQ','TEXT'))
+    QuestionType VARCHAR(20) NOT NULL CONSTRAINT CK_ArticleQuestions_Type CHECK (QuestionType IN
+        ('SHORT','TEXT','MCQ','CHECKBOX','DROPDOWN','SCALE','RATING','GRID','CHECKGRID','LIKERT',
+         'RANKING','NPS','DATE','TIME','FILE')),
+    Description  NVARCHAR(1000) NULL,
+    IsRequired   BIT NOT NULL DEFAULT 1,
+    Shuffle      BIT NOT NULL DEFAULT 0,
+    Settings     NVARCHAR(MAX) NULL   -- JSON: scale range, rating levels, grid rows/columns, file rules, ...
 );
 
 CREATE TABLE dbo.QuestionOptions (
@@ -107,6 +121,23 @@ CREATE TABLE dbo.ResponseAnswers (
     ResponseId       INT NOT NULL REFERENCES dbo.ArticleResponses(ResponseId) ON DELETE CASCADE,
     QuestionId       INT NOT NULL REFERENCES dbo.ArticleQuestions(QuestionId),
     SelectedOptionId INT NULL REFERENCES dbo.QuestionOptions(OptionId),
-    AnswerText       NVARCHAR(MAX) NULL
+    AnswerText       NVARCHAR(MAX) NULL,   -- readable answer (all types)
+    AnswerJson       NVARCHAR(MAX) NULL,   -- the answer as given (checkbox list, grid, ranking, files ...)
+    IsCorrect        BIT NULL              -- NULL = question is not graded
 );
 CREATE INDEX IX_ResponseAnswers_Response ON dbo.ResponseAnswers(ResponseId);
+
+/* Files uploaded by readers for File upload questions.
+   QuestionId has no foreign key on purpose: questions are re-created when an article is edited
+   before anyone submits, and a reader may already have uploaded a file. */
+CREATE TABLE dbo.ResponseFiles (
+    FileId      UNIQUEIDENTIFIER NOT NULL PRIMARY KEY DEFAULT NEWID(),
+    RecipientId INT NOT NULL REFERENCES dbo.ArticleRecipients(RecipientId) ON DELETE CASCADE,
+    QuestionId  INT NOT NULL,
+    FileName    NVARCHAR(260) NOT NULL,
+    MimeType    VARCHAR(100) NOT NULL,
+    SizeBytes   INT NOT NULL,
+    Data        VARBINARY(MAX) NOT NULL,
+    CreatedAt   DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+);
+CREATE INDEX IX_ResponseFiles_Recipient ON dbo.ResponseFiles(RecipientId, QuestionId);

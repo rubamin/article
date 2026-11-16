@@ -71,6 +71,21 @@ export const adminApi = {
   recipient: (rid) => request(`/admin/recipients/${rid}`, { admin: true }),
   uploadImage: (file) => uploadFile('/admin/assets', file),
   importDocx: (file) => uploadFile('/admin/import-docx', file),
+  // A reader's uploaded file (File upload question): fetched with the admin token, then saved
+  async downloadResponseFile(fileId, name) {
+    const res = await fetch(`${BASE}/admin/response-files/${fileId}`, {
+      headers: { Authorization: `Bearer ${session.token()}` },
+    });
+    if (!res.ok) await handle(res, true);
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name || 'file';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  },
 };
 
 export const publicApi = {
@@ -79,6 +94,15 @@ export const publicApi = {
   get: (token) => request(`/public/${token}`),
   open: (token) => request(`/public/${token}/open`, { method: 'POST', body: {} }),
   submit: (token, answers) => request(`/public/${token}/submit`, { method: 'POST', body: { answers } }),
+  // File upload question: questionId must be sent before the file (multer reads fields in order)
+  async uploadFile(token, questionId, file) {
+    const form = new FormData();
+    form.append('questionId', String(questionId));
+    form.append('file', file);
+    const res = await fetch(`${BASE}/public/${token}/files`, { method: 'POST', body: form });
+    return handle(res, false);
+  },
+  removeFile: (token, fileId) => request(`/public/${token}/files/${fileId}`, { method: 'DELETE' }),
 };
 
 // Reader's personal token for a share link, so they are not asked again on this device.
