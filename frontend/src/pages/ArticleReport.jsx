@@ -2,7 +2,8 @@ import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { adminApi } from '../api';
 import SharePanel from '../components/SharePanel';
-import { downloadCsv, formatDateTime, formatDuration } from '../utils/format';
+import ExcelExport from '../components/ExcelExport';
+import { formatDateTime, formatDuration } from '../utils/format';
 import { TYPE_LABEL } from '../utils/questionTypes';
 import { usePageTour } from '../tour/TourProvider';
 
@@ -110,6 +111,7 @@ export default function ArticleReport() {
   const [addMsg, setAddMsg] = useState('');
   const [openRow, setOpenRow] = useState(null);
   const [copied, setCopied] = useState(null);
+  const [showExcel, setShowExcel] = useState(false);
 
   const load = useCallback(() => {
     adminApi.report(id).then(setReport).catch((e) => setError(e.message));
@@ -156,21 +158,6 @@ export default function ArticleReport() {
     setTimeout(() => setCopied(null), 1500);
   }
 
-  function exportCsv() {
-    const rows = [[
-      'Name', 'Email', 'Department', 'Joined via', 'Personal link', 'Times opened', 'First opened', 'Last opened',
-      'Time on page (sec)', 'Away time (sec)', 'Times left page', 'Total open time (sec)', 'Max scroll %',
-      'Submitted at', 'Correct answers', 'Scored questions',
-    ]];
-    report.recipients.forEach((r) => rows.push([
-      r.name, r.email, r.department, r.source === 'LINK' ? 'Share link' : 'Invited', r.link, r.openCount,
-      formatDateTime(r.firstOpenedAt), formatDateTime(r.lastOpenedAt),
-      r.totalActiveSeconds, r.totalAwaySeconds, r.totalAwayCount, r.totalOpenSeconds, r.maxScrollPct,
-      r.submittedAt ? formatDateTime(r.submittedAt) : '', r.mcqCorrect ?? '', r.mcqTotal ?? '',
-    ]));
-    downloadCsv(`${report.article.title.replace(/[^\w-]+/g, '_')}_report.csv`, rows);
-  }
-
   usePageTour('report', !!report);
 
   if (error && !report) return <p className="error">{error}</p>;
@@ -194,9 +181,13 @@ export default function ArticleReport() {
         </div>
         <div className="head-actions">
           <Link className="btn ghost" to={`/admin/articles/${id}/edit`} data-tour="edit-article">Edit article</Link>
-          <button className="btn ghost" onClick={exportCsv} disabled={!rs.length} data-tour="export-csv">Export to Excel (CSV)</button>
+          <button className="btn ghost" onClick={() => setShowExcel(true)} disabled={!rs.length} data-tour="export-csv">Export to Excel</button>
         </div>
       </div>
+
+      {showExcel && (
+        <ExcelExport articleId={id} title={article.title} recipients={rs} onClose={() => setShowExcel(false)} />
+      )}
 
       <SharePanel title={article.title} link={article.shareLink} active={article.shareActive} onToggle={toggleShare} />
 

@@ -71,6 +71,7 @@ export const adminApi = {
   addRecipients: (id, recipients) =>
     request(`/admin/articles/${id}/recipients`, { method: 'POST', body: { recipients }, admin: true }),
   report: (id) => request(`/admin/articles/${id}/report`, { admin: true }),
+  answers: (id) => request(`/admin/articles/${id}/answers`, { admin: true }),
   recipient: (rid) => request(`/admin/recipients/${rid}`, { admin: true }),
   uploadImage: (file) => uploadFile('/admin/assets', file),
   importDocx: (file) => uploadFile('/admin/import-docx', file),

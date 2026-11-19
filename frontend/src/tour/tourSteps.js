@@ -201,7 +201,7 @@ export const TOURS = {
     {
       el: '[data-tour="export-csv"]',
       title: 'Export to Excel',
-      text: 'Downloads the whole table as a CSV file that opens in Excel (Gujarati and Hindi names display correctly).',
+      text: 'Pick the columns and the questions you want (each reader\'s answers become columns), check the preview, then download an Excel (.xlsx) file.',
       side: 'bottom', align: 'end',
     },
     {

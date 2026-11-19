@@ -382,6 +382,44 @@ router.get('/articles/:id/report', ah(async (req, res) => {
   });
 }));
 
+// Every reader's answers for an article, for the Excel export (questions as columns)
+router.get('/articles/:id/answers', ah(async (req, res) => {
+  const id = Number(req.params.id);
+  const pool = await getPool();
+  const a = await ownArticle(pool, id, req.admin.adminId);
+  if (!a) return res.status(404).json({ error: 'Article not found.' });
+
+  const questions = await loadQuestions(pool, id, { includeCorrect: true });
+  const r = await pool.request().input('a', sql.Int, id).query(`
+    SELECT r.RecipientId, ans.QuestionId, ans.AnswerText,
+           COALESCE(ans.IsCorrect, sel.IsCorrect) AS IsCorrect, sel.OptionText AS SelectedOption
+    FROM dbo.ArticleRecipients r
+    JOIN dbo.ArticleResponses s ON s.RecipientId = r.RecipientId
+    JOIN dbo.ResponseAnswers ans ON ans.ResponseId = s.ResponseId
+    LEFT JOIN dbo.QuestionOptions sel ON sel.OptionId = ans.SelectedOptionId
+    WHERE r.ArticleId = @a`);
+
+  // { recipientId: { questionId: { text, isCorrect } } }
+  const answers = {};
+  for (const x of r.recordset) {
+    (answers[x.RecipientId] ||= {})[x.QuestionId] = {
+      text: x.AnswerText || x.SelectedOption || '',
+      isCorrect: x.IsCorrect === null || x.IsCorrect === undefined ? null : !!x.IsCorrect,
+    };
+  }
+
+  res.json({
+    questions: questions.map((q, i) => ({
+      questionId: q.questionId,
+      order: i + 1,
+      text: q.text,
+      type: q.type,
+      correctOption: correctText(q),
+    })),
+    answers,
+  });
+}));
+
 // One reader: every open session + every answer
 router.get('/recipients/:rid', ah(async (req, res) => {
   const rid = Number(req.params.rid);

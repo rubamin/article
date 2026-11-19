@@ -1,8 +1,11 @@
 // Turns the article view (header, article, optional questions) into an A4 PDF that looks
-// exactly like the screen: the page is captured as an image, then cut into A4 pages.
+// like the screen: the page is captured as an image, then cut into A4 pages.
 // The libraries are loaded only when a PDF is made, so normal pages stay small.
 
-export const PDF_WIDTH_PX = 1280; // layout width used for the PDF (the reader's base design width)
+// The page is laid out at the real width of an A4 sheet (210 mm at 96 px per inch), so a CSS
+// font size in pt is the same size in the PDF: 14pt on screen = 14pt in the PDF.
+// The article font size for the PDF is set in styles.css (--pdf-font-size).
+export const PDF_WIDTH_PX = 794;
 const PAGE_W_MM = 210;
 const PAGE_H_MM = 297;
 const MARGIN_MM = 10; // top and bottom of every page
@@ -53,7 +56,8 @@ function pageBreaks(root, pageH) {
   return pages;
 }
 
-export async function downloadArticlePdf(root, fileName) {
+/** Returns the PDF as a Blob (shown in the preview, then downloaded). */
+export async function buildArticlePdf(root) {
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
   if (document.fonts && document.fonts.ready) await document.fonts.ready;
   await Promise.all(Array.from(root.querySelectorAll('img')).map((img) => (img.complete
@@ -63,13 +67,14 @@ export async function downloadArticlePdf(root, fileName) {
   const widthPx = root.offsetWidth;
   const pageH = Math.floor(widthPx * ((PAGE_H_MM - 2 * MARGIN_MM) / PAGE_W_MM));
   const pages = pageBreaks(root, pageH);
-  const scale = Math.min(2, MAX_CANVAS_PX / Math.max(1, root.scrollHeight));
+  const scale = Math.min(2.5, MAX_CANVAS_PX / Math.max(1, root.scrollHeight));
 
   const canvas = await html2canvas(root, {
     scale,
     useCORS: true,
     backgroundColor: `rgb(${PAGE_BG.join(',')})`,
-    windowWidth: widthPx,
+    // Same window width as the live page, so media queries match the layout the page breaks were measured on
+    windowWidth: document.documentElement.clientWidth,
     scrollX: 0,
     scrollY: -window.scrollY,
   });
@@ -92,7 +97,7 @@ export async function downloadArticlePdf(root, fileName) {
     pdf.addImage(slice.toDataURL('image/jpeg', 0.92), 'JPEG', 0, MARGIN_MM, PAGE_W_MM, (end - start) * mmPerPx);
   });
 
-  pdf.save(fileName);
+  return pdf.output('blob');
 }
 
 export const pdfFileName = (title) =>

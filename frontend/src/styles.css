@@ -688,3 +688,106 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); box-sh
 @media (max-width: 600px) {
   .view-bar-inner { padding: 10px 16px; }
 }
+
+/* PDF layout (ArticleView adds .pdf-mode while the PDF is made; the page is A4 wide there).
+   Article text is a fixed size; headings are sized relative to it, so they follow
+   if --pdf-font-size changes. !important also overrides sizes pasted in from Word. */
+.pdf-mode { --pdf-font-size: 14pt; }
+.pdf-mode .article-body { font-size: var(--pdf-font-size); line-height: 1.6; }
+.pdf-mode .article-body :not(h1, h2, h3, h4, h5, h6, sub, sup, small) { font-size: inherit !important; }
+.pdf-mode .article-body h1 { font-size: 1.6em !important; }
+.pdf-mode .article-body h2 { font-size: 1.35em !important; }
+.pdf-mode .article-body h3 { font-size: 1.18em !important; }
+.pdf-mode .article-body h4,
+.pdf-mode .article-body h5,
+.pdf-mode .article-body h6 { font-size: 1.05em !important; }
+.pdf-mode .quiz { font-size: var(--pdf-font-size); }
+.pdf-mode .quiz h2 { font-size: 1.35em; }
+.pdf-mode .quiz-q legend,
+.pdf-mode .quiz .choice,
+.pdf-mode .quiz .q-help { font-size: 1em; }
+.pdf-mode .quiz .quiz-note { font-size: 0.9em; }
+
+/* Dialogs (PDF preview, Excel export) */
+.modal-back {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(29, 43, 56, 0.55);
+}
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: 100%;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.modal-head h2 { font-size: 18px; font-weight: 600; }
+.modal-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px 12px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+}
+.pdf-modal { max-width: 980px; height: 100%; }
+.pdf-frame { flex: 1; width: 100%; min-height: 0; border: 0; background: #525659; }
+.pdf-opt { margin-right: auto; }
+
+/* Excel export */
+.xl-modal { max-width: 1240px; height: 100%; }
+.xl-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 290px 1fr; }
+.xl-options { overflow-y: auto; padding: 16px 20px; border-right: 1px solid var(--line); }
+.xl-options fieldset { border: 0; padding: 0; margin: 0 0 20px; display: grid; gap: 6px; }
+.xl-options legend { font-weight: 600; margin-bottom: 4px; padding: 0; }
+.xl-options hr { border: 0; border-top: 1px solid var(--line); margin: 6px 0; width: 100%; }
+.xl-options .view-check { align-items: flex-start; }
+.xl-options .view-check input { margin-top: 2px; flex: none; }
+.xl-q span { overflow-wrap: anywhere; }
+.xl-quick { display: flex; gap: 12px; margin-bottom: 2px; }
+.link-btn { font: inherit; font-size: 13px; padding: 0; border: 0; background: none; color: var(--accent); cursor: pointer; text-decoration: underline; }
+.xl-preview { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 16px 20px; background: var(--page); }
+.xl-preview-head { display: flex; align-items: baseline; gap: 12px; }
+.xl-tabs { align-self: flex-start; }
+.xl-empty { margin: 24px 0; }
+.xl-grid-wrap { flex: 1; min-height: 0; overflow: auto; background: var(--surface); border: 1px solid var(--line); }
+.xl-grid { border-collapse: collapse; font-size: 13px; }
+.xl-grid th, .xl-grid td {
+  border: 1px solid #e1e5e9;
+  padding: 5px 8px;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+.xl-grid thead th { position: sticky; top: 0; z-index: 1; background: #1d2b38; color: #fff; font-weight: 600; }
+.xl-grid td.num { text-align: right; }
+.xl-grid td.ok { color: var(--ok); font-weight: 600; }
+.xl-grid td.bad { color: var(--error); font-weight: 600; }
+.xl-grid .xl-rn { background: #f3f5f7; color: var(--muted); text-align: center; min-width: 36px; font-size: 12px; }
+.xl-grid thead .xl-rn { background: #2c3e4f; left: 0; }
+.xl-more { margin: 8px; }
+@media (max-width: 820px) {
+  .modal-back { padding: 8px; }
+  .xl-body { grid-template-columns: 1fr; overflow-y: auto; }
+  .xl-options { border-right: 0; border-bottom: 1px solid var(--line); overflow: visible; }
+  .xl-preview { min-height: 360px; }
+}
