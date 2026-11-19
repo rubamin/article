@@ -55,6 +55,9 @@ async function uploadFile(path, file) {
 
 export const authApi = {
   login: (username, password) => request('/auth/login', { method: 'POST', body: { username, password } }),
+  me: () => request('/auth/me', { admin: true }),
+  markTourSeen: (key) => request(`/auth/tours/${key}`, { method: 'POST', body: {}, admin: true }),
+  resetTours: () => request('/auth/tours', { method: 'DELETE', admin: true }),
 };
 
 export const adminApi = {

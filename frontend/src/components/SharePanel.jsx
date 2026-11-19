@@ -35,11 +35,11 @@ export default function SharePanel({ title, link, active, onToggle, compact = fa
   }
 
   return (
-    <section className={`share ${active ? '' : 'closed'}`} aria-labelledby="share-title">
+    <section className={`share ${active ? '' : 'closed'}`} aria-labelledby="share-title" data-tour="share-link">
       <div className="share-top">
         <h2 id="share-title">Share link</h2>
         {onToggle && (
-          <label className="switch">
+          <label className="switch" data-tour="share-toggle">
             <input type="checkbox" checked={active} onChange={toggle} disabled={toggling} />
             <span>{active ? 'Open for new readers' : 'Closed for new readers'}</span>
           </label>

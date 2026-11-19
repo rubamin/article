@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import AdminGate from './components/AdminGate';
 import ArticleList from './pages/ArticleList';
 import ArticleReport from './pages/ArticleReport';
+import ArticleView from './pages/ArticleView';
 import PublicArticle from './pages/PublicArticle';
 import ShareJoin from './pages/ShareJoin';
 
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="articles/new" element={editor} />
         <Route path="articles/:id/edit" element={editor} />
         <Route path="articles/:id" element={<ArticleReport />} />
+        <Route path="articles/:id/view" element={<ArticleView />} />
       </Route>
       <Route path="*" element={<Navigate to="/admin" replace />} />
     </Routes>

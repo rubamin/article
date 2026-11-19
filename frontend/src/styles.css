@@ -652,3 +652,39 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); box-sh
 .a-text.is-ok { border-color: var(--ok); }
 .a-text.is-bad { border-color: var(--error); }
 .a-files { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+/* ---------- v7: admin article preview (View) and PDF ---------- */
+.view-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.view-bar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 10px 24px;
+  margin: 0;
+}
+.view-bar-note { margin-right: auto; }
+.view-bar-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.view-check { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
+.view-check input { width: 16px; height: 16px; accent-color: var(--accent); }
+.pdf-busy {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(243, 245, 247, 0.97);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+}
+@media (max-width: 600px) {
+  .view-bar-inner { padding: 10px 16px; }
+}

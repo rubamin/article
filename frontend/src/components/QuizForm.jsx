@@ -170,7 +170,7 @@ function Ranking({ q, a, set }) {
   );
 }
 
-function FileAnswer({ q, a, set, token }) {
+function FileAnswer({ q, a, set, token, preview }) {
   const ref = useRef(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -219,7 +219,7 @@ function FileAnswer({ q, a, set, token }) {
         </ul>
       )}
       {files.length < maxFiles && (
-        <button type="button" className="btn ghost" onClick={() => ref.current.click()} disabled={busy}>
+        <button type="button" className="btn ghost" onClick={() => ref.current.click()} disabled={busy || preview}>
           {busy ? 'Uploading…' : files.length ? 'Add another file' : 'Add file'}
         </button>
       )}
@@ -232,7 +232,7 @@ function FileAnswer({ q, a, set, token }) {
   );
 }
 
-function QuestionInput({ q, a, set, token }) {
+function QuestionInput({ q, a, set, token, preview }) {
   const name = `q${q.questionId}`;
   const cur = a || {};
   switch (q.type) {
@@ -301,7 +301,7 @@ function QuestionInput({ q, a, set, token }) {
     case 'TIME':
       return <input className="date-input" type="time" value={cur.value || ''} onChange={(e) => set({ value: e.target.value })} />;
     case 'FILE':
-      return <FileAnswer q={q} a={a} set={set} token={token} />;
+      return <FileAnswer q={q} a={a} set={set} token={token} preview={preview} />;
     default:
       return null;
   }
@@ -316,7 +316,8 @@ function toPayload(q, a) {
 }
 
 /* ---------- the quiz ---------- */
-export default function QuizForm({ token, quizTitle, quizNote, questions: rawQuestions, onDone }) {
+/** preview: admin view, nothing is sent. hideSubmit: leave out the submit button (PDF). */
+export default function QuizForm({ token, quizTitle, quizNote, questions: rawQuestions, onDone, preview = false, hideSubmit = false }) {
   // Shuffle once per page load for questions that ask for it
   const questions = useMemo(() => rawQuestions.map((q) => (q.shuffle ? { ...q, options: shuffled(q.options) } : q)), [rawQuestions]);
   const [answers, setAnswers] = useState({});
@@ -337,6 +338,7 @@ export default function QuizForm({ token, quizTitle, quizNote, questions: rawQue
 
   async function submit(e) {
     e.preventDefault();
+    if (preview) return;
     setError('');
     const missing = questions.findIndex((q) => q.required && isEmpty(q, answers[q.questionId]));
     if (missing !== -1) {
@@ -379,14 +381,16 @@ export default function QuizForm({ token, quizTitle, quizNote, questions: rawQue
           {q.description && <p className="q-help muted">{q.description}</p>}
           {q.type === 'CHECKBOX' && <p className="q-help muted small">Select all that apply.</p>}
           {q.type === 'RANKING' && <p className="q-help muted small">Use the arrows to put the items in order (1 = top).</p>}
-          <QuestionInput q={q} a={answers[q.questionId]} set={(v) => setAnswer(q.questionId, v)} token={token} />
+          <QuestionInput q={q} a={answers[q.questionId]} set={(v) => setAnswer(q.questionId, v)} token={token} preview={preview} />
         </fieldset>
       ))}
 
       {error && <p className="error">{error}</p>}
-      <button className="btn primary large" disabled={submitting}>
-        {submitting ? 'Submitting…' : 'Submit answers'}
-      </button>
+      {!hideSubmit && (
+        <button className="btn primary large" disabled={submitting || preview} title={preview ? 'Preview only: answers are not sent' : undefined}>
+          {submitting ? 'Submitting…' : 'Submit answers'}
+        </button>
+      )}
     </form>
   );
 }

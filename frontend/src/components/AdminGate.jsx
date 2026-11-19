@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet, useMatch } from 'react-router-dom';
 import { authApi, session } from '../api';
+import { TourButton, TourProvider } from '../tour/TourProvider';
 
 export default function AdminGate() {
   const [admin, setAdmin] = useState(() => (session.token() ? session.admin() : null));
@@ -8,6 +9,8 @@ export default function AdminGate() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  // The article preview uses the full width, like the reader page
+  const fullWidth = useMatch('/admin/articles/:id/view');
 
   useEffect(() => {
     const onLogout = () => setAdmin(null);
@@ -55,19 +58,24 @@ export default function AdminGate() {
   }
 
   return (
-    <div className="admin">
-      <header className="admin-bar">
-        <Link to="/admin" className="brand">Article Tracker</Link>
-        <div className="admin-user">
-          <span>{admin.fullName}</span>
-          <button className="btn ghost small" onClick={() => { session.clear(); setAdmin(null); }}>
-            Sign out
-          </button>
-        </div>
-      </header>
-      <main className="admin-main">
-        <Outlet />
-      </main>
-    </div>
+    <TourProvider key={admin.adminId} admin={admin}>
+      <div className="admin">
+        <header className="admin-bar">
+          <Link to="/admin" className="brand">Article Tracker</Link>
+          <div className="admin-user">
+            <TourButton />
+            <span>{admin.fullName}</span>
+            <button className="btn ghost small" data-tour="sign-out" onClick={() => { session.clear(); setAdmin(null); }}>
+              Sign out
+            </button>
+          </div>
+        </header>
+        {fullWidth ? <Outlet /> : (
+          <main className="admin-main">
+            <Outlet />
+          </main>
+        )}
+      </div>
+    </TourProvider>
   );
 }

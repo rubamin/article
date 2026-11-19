@@ -4,6 +4,7 @@ import { adminApi } from '../api';
 import SharePanel from '../components/SharePanel';
 import { downloadCsv, formatDateTime, formatDuration } from '../utils/format';
 import { TYPE_LABEL } from '../utils/questionTypes';
+import { usePageTour } from '../tour/TourProvider';
 
 // Accepts lines pasted from Excel (tab separated) or typed as "Name, email, Department"
 function parseRecipients(text) {
@@ -170,6 +171,8 @@ export default function ArticleReport() {
     downloadCsv(`${report.article.title.replace(/[^\w-]+/g, '_')}_report.csv`, rows);
   }
 
+  usePageTour('report', !!report);
+
   if (error && !report) return <p className="error">{error}</p>;
   if (!report) return <p className="muted">Loading report…</p>;
 
@@ -190,14 +193,14 @@ export default function ArticleReport() {
           <h1>{article.title}</h1>
         </div>
         <div className="head-actions">
-          <Link className="btn ghost" to={`/admin/articles/${id}/edit`}>Edit article</Link>
-          <button className="btn ghost" onClick={exportCsv} disabled={!rs.length}>Export to Excel (CSV)</button>
+          <Link className="btn ghost" to={`/admin/articles/${id}/edit`} data-tour="edit-article">Edit article</Link>
+          <button className="btn ghost" onClick={exportCsv} disabled={!rs.length} data-tour="export-csv">Export to Excel (CSV)</button>
         </div>
       </div>
 
       <SharePanel title={article.title} link={article.shareLink} active={article.shareActive} onToggle={toggleShare} />
 
-      <dl className="stats">
+      <dl className="stats" data-tour="stats">
         <div><dt>People who opened</dt><dd>{opened.length}</dd></div>
         <div><dt>Total opens</dt><dd>{totalOpens}</dd></div>
         <div><dt>Avg. time on page</dt><dd>{formatDuration(avgReading)}</dd></div>
@@ -208,10 +211,10 @@ export default function ArticleReport() {
       {error && <p className="error">{error}</p>}
 
       {rs.length === 0 ? (
-        <div className="empty"><p>Nobody has opened this article yet. Copy the link above and share it.</p></div>
+        <div className="empty" data-tour="empty-report"><p>Nobody has opened this article yet. Copy the link above and share it.</p></div>
       ) : (
         <>
-          <div className="table-wrap">
+          <div className="table-wrap" data-tour="readers-table">
             <table className="table">
               <thead>
                 <tr>
@@ -230,6 +233,7 @@ export default function ArticleReport() {
                 {rs.map((r) => (
                   <Fragment key={r.recipientId}>
                     <tr
+                      data-tour="reader-row"
                       className={`clickable ${openRow === r.recipientId ? 'expanded' : ''}`}
                       onClick={() => setOpenRow(openRow === r.recipientId ? null : r.recipientId)}
                     >
@@ -268,7 +272,7 @@ export default function ArticleReport() {
         </>
       )}
 
-      <details className="invite">
+      <details className="invite" data-tour="invite">
         <summary>Invite specific people with personal links (optional)</summary>
         <form onSubmit={addRecipients}>
           <p className="muted small">

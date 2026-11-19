@@ -7,6 +7,7 @@ import HtmlEditor from '../components/HtmlEditor';
 import QuestionBuilder from '../components/QuestionBuilder';
 import { defaultHeader, pickHeader } from '../utils/color';
 import { blankQuestion, fromApi, toApi } from '../utils/questionTypes';
+import { usePageTour } from '../tour/TourProvider';
 
 const FALLBACK_CONFIG = {
   maxQuestions: 20, defaultQuestions: 5, maxOptions: 20, maxGridRows: 20, maxGridCols: 10,
@@ -73,6 +74,8 @@ export default function ArticleEditor() {
     load();
     return () => { cancelled = true; };
   }, [id, isEdit]);
+
+  usePageTour('editor', !loading);
 
   const uploadImage = async (file) => (await adminApi.uploadImage(file)).url;
 
@@ -147,29 +150,31 @@ export default function ArticleEditor() {
         <h1>{isEdit ? 'Edit article' : 'New article'}</h1>
         <div className="head-actions">
           <Link className="btn ghost" to={isEdit ? `/admin/articles/${id}` : '/admin'}>Cancel</Link>
-          <button className="btn primary" disabled={saving}>{saving ? 'Saving…' : 'Save article'}</button>
+          <button className="btn primary" disabled={saving} data-tour="save-article">{saving ? 'Saving…' : 'Save article'}</button>
         </div>
       </div>
 
       {error && <p className="error">{error}</p>}
 
-      <label className="field">
+      <label className="field" data-tour="article-title-field">
         <span>Title</span>
         <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={300} required />
       </label>
 
       <h2 className="section-title">Header</h2>
-      <HeaderBranding
-        title={title}
-        header={header}
-        onChange={(patch) => setHeader((h) => ({ ...h, ...patch }))}
-        logo={logo}
-        onLogoChange={setLogo}
-      />
+      <div data-tour="header-branding">
+        <HeaderBranding
+          title={title}
+          header={header}
+          onChange={(patch) => setHeader((h) => ({ ...h, ...patch }))}
+          logo={logo}
+          onLogoChange={setLogo}
+        />
+      </div>
 
       <h2 className="section-title">Content</h2>
       <div className="mode-bar">
-        <div className="mode-tabs" role="tablist" aria-label="How to write the article">
+        <div className="mode-tabs" data-tour="content-mode" role="tablist" aria-label="How to write the article">
           <button
             type="button" role="tab" aria-selected={contentSource === 'WORD'}
             className={contentSource === 'WORD' ? 'on' : ''} onClick={() => switchMode('WORD')}
@@ -183,7 +188,7 @@ export default function ArticleEditor() {
             HTML code
           </button>
         </div>
-        <button type="button" className="btn ghost" onClick={() => docxRef.current.click()} disabled={importing}>
+        <button type="button" className="btn ghost" data-tour="import-docx" onClick={() => docxRef.current.click()} disabled={importing}>
           {importing ? 'Importing…' : 'Import Word file (.docx)'}
         </button>
         <input
@@ -209,7 +214,7 @@ export default function ArticleEditor() {
 
       <h2 className="section-title">Questions</h2>
       {locked ? (
-        <p className="notice">
+        <p className="notice" data-tour="questions-locked">
           People have already answered this article, so the questions are locked.
           You can still change the title, header and content.
         </p>

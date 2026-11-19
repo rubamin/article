@@ -54,6 +54,46 @@ router.post('/login', ah(async (req, res) => {
   res.json({ token, admin: { adminId: user.AdminId, username: user.Username, fullName: user.FullName } });
 }));
 
-router.get('/me', adminAuth, (req, res) => res.json({ admin: req.admin }));
+// Software tour: which page tours this admin has already seen.
+const TOUR_KEYS = ['list', 'editor', 'report'];
+const parseTours = (v) => String(v || '').split(',').map((s) => s.trim()).filter((k) => TOUR_KEYS.includes(k));
+
+router.get('/me', adminAuth, ah(async (req, res) => {
+  let toursSeen = null; // null = unknown (migration 005 not run): the tour does not open by itself
+  try {
+    const pool = await getPool();
+    const r = await pool.request().input('u', sql.Int, req.admin.adminId)
+      .query('SELECT ToursSeen FROM dbo.AdminUsers WHERE AdminId = @u');
+    toursSeen = parseTours(r.recordset[0] && r.recordset[0].ToursSeen);
+  } catch (e) {
+    console.warn('Software tour: could not read ToursSeen (run database/migrations/005_software_tour.sql).', e.message);
+  }
+  res.json({ admin: req.admin, toursSeen });
+}));
+
+// Mark one page tour as seen (finished or skipped)
+router.post('/tours/:key', adminAuth, ah(async (req, res) => {
+  const key = String(req.params.key);
+  if (!TOUR_KEYS.includes(key)) return res.status(400).json({ error: 'Unknown tour.' });
+  const pool = await getPool();
+  const r = await pool.request().input('u', sql.Int, req.admin.adminId)
+    .query('SELECT ToursSeen FROM dbo.AdminUsers WHERE AdminId = @u');
+  const seen = new Set(parseTours(r.recordset[0] && r.recordset[0].ToursSeen));
+  seen.add(key);
+  const list = TOUR_KEYS.filter((k) => seen.has(k));
+  await pool.request()
+    .input('u', sql.Int, req.admin.adminId)
+    .input('t', sql.NVarChar(200), list.join(','))
+    .query('UPDATE dbo.AdminUsers SET ToursSeen = @t WHERE AdminId = @u');
+  res.json({ toursSeen: list });
+}));
+
+// Show all tours again on next visit
+router.delete('/tours', adminAuth, ah(async (req, res) => {
+  const pool = await getPool();
+  await pool.request().input('u', sql.Int, req.admin.adminId)
+    .query('UPDATE dbo.AdminUsers SET ToursSeen = NULL WHERE AdminId = @u');
+  res.json({ toursSeen: [] });
+}));
 
 module.exports = router;
