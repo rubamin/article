@@ -25,7 +25,7 @@ export default function ArticleList() {
       {error && <p className="error">{error}</p>}
       {rows && rows.length === 0 && (
         <div className="empty" data-tour="empty-articles">
-          <p>No articles yet. Create one with its 5 questions, then copy its link and share it.</p>
+          <p>No articles yet. Create one (with or without questions), then copy its link and share it.</p>
           <Link className="btn primary" to="/admin/articles/new">Create the first article</Link>
         </div>
       )}

@@ -110,6 +110,7 @@ router.get('/:token', ah(async (req, res) => {
   const a = await pool.request().input('a', sql.Int, rec.ArticleId)
     .query(`SELECT Title, ContentHtml, HeaderColor, LogoAssetId, ${HEADER_COLUMNS} FROM dbo.Articles WHERE ArticleId = @a`);
   const art = a.recordset[0];
+  const questions = await loadQuestions(pool, rec.ArticleId); // no isCorrect here
   res.json({
     name: rec.EmployeeName,
     title: art.Title,
@@ -120,7 +121,8 @@ router.get('/:token', ah(async (req, res) => {
     quizTitle: art.QuizTitle || DEFAULT_QUIZ_TITLE,
     quizNote: art.QuizNote || '',
     submitted: !!rec.Submitted,
-    questions: rec.Submitted ? [] : await loadQuestions(pool, rec.ArticleId), // no isCorrect here
+    hasQuestions: questions.length > 0, // false = article shared for reading only
+    questions: rec.Submitted ? [] : questions,
   });
 }));
 
@@ -238,6 +240,7 @@ router.post('/:token/submit', ah(async (req, res) => {
   if (!rec) return notFound(res);
   if (rec.Submitted) return res.status(409).json({ error: 'You have already submitted your answers.' });
 
+  // An article without questions is "submitted" with an empty list — the reader marks it as read.
   const questions = await loadQuestions(pool, rec.ArticleId, { includeCorrect: true });
   const given = new Map((Array.isArray(req.body.answers) ? req.body.answers : [])
     .filter((a) => a && typeof a === 'object')

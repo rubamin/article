@@ -19,6 +19,8 @@ export default function PublicArticle() {
   const [data, setData] = useState(null);
   const [loadError, setLoadError] = useState('');
   const [done, setDone] = useState(false);
+  const [marking, setMarking] = useState(false);
+  const [markError, setMarkError] = useState('');
   const stageRef = useRef(null);
   const quizAfterExit = useRef(false);
   const [normalZoom, setNormalZoom] = useState(1);
@@ -106,6 +108,21 @@ export default function PublicArticle() {
   if (!data) return <main className="reader" style={{ zoom: scale }}><p className="muted">Loading article…</p></main>;
 
   const alreadyDone = done || data.submitted;
+  const articleOnly = !data.submitted && !(data.questions && data.questions.length);
+
+  async function markRead() {
+    setMarkError('');
+    setMarking(true);
+    try {
+      await publicApi.submit(token, []);
+      setDone(true);
+    } catch (e) {
+      if (e.status === 409) setDone(true); // already marked from another tab
+      else setMarkError(e.message);
+    } finally {
+      setMarking(false);
+    }
+  }
 
   return (
     // The whole page is scaled to the screen width (see useReaderScale).
@@ -140,7 +157,7 @@ export default function PublicArticle() {
           {isFull && (
             <div className="stage-end">
               <button type="button" className="btn primary" onClick={alreadyDone ? exitFull : goToQuiz}>
-                {alreadyDone ? 'Exit full screen' : 'Exit full screen and answer the questions'}
+                {alreadyDone ? 'Exit full screen' : articleOnly ? 'Exit full screen' : 'Exit full screen and answer the questions'}
               </button>
             </div>
           )}
@@ -150,8 +167,19 @@ export default function PublicArticle() {
           <section className="quiz" aria-labelledby="quiz-title">
             {alreadyDone ? (
               <div className="thanks">
-                <h2 id="quiz-title">Your answers are saved</h2>
+                <h2 id="quiz-title">{data.hasQuestions === false ? 'Thank you for reading' : 'Your answers are saved'}</h2>
                 <p>Thank you for reading. You can come back to this article any time using the same link.</p>
+              </div>
+            ) : articleOnly ? (
+              <div className="thanks">
+                <h2 id="quiz-title">Finished reading?</h2>
+                <p>Let us know you have read this article.</p>
+                {markError && <p className="error">{markError}</p>}
+                <p>
+                  <button type="button" className="btn primary" onClick={markRead} disabled={marking}>
+                    {marking ? 'Saving…' : 'I have read this article'}
+                  </button>
+                </p>
               </div>
             ) : (
               <QuizForm

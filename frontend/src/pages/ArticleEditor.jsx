@@ -30,6 +30,7 @@ export default function ArticleEditor() {
   const [quizTitle, setQuizTitle] = useState('');
   const [quizNote, setQuizNote] = useState('');
   const [questions, setQuestions] = useState(() => Array.from({ length: FALLBACK_CONFIG.defaultQuestions }, () => blankQuestion()));
+  const [withQuestions, setWithQuestions] = useState(true); // off = article only, no questions
   const [locked, setLocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -55,6 +56,7 @@ export default function ArticleEditor() {
           setQuizTitle(a.quizTitle || '');
           setQuizNote(a.quizNote || '');
           setLocked(a.responseCount > 0);
+          setWithQuestions(a.questions.length > 0);
           setQuestions(a.questions.length ? a.questions.map(fromApi) : [blankQuestion()]);
         } else {
           setQuestions(Array.from({ length: cfg.defaultQuestions || 5 }, () => blankQuestion()));
@@ -125,7 +127,7 @@ export default function ArticleEditor() {
         ...header,
         logoAssetId: logo ? logo.assetId : null,
         quizTitle, quizNote,
-        questions: questions.map(toApi),
+        questions: withQuestions ? questions.map(toApi) : [],
       };
       if (isEdit) {
         await adminApi.update(id, payload);
@@ -213,28 +215,45 @@ export default function ArticleEditor() {
       )}
 
       <h2 className="section-title">Questions</h2>
+      <label className="view-check">
+        <input
+          type="checkbox"
+          checked={withQuestions}
+          disabled={locked}
+          onChange={(e) => setWithQuestions(e.target.checked)}
+        />
+        <span>Ask questions after the article</span>
+      </label>
       {locked ? (
         <p className="notice" data-tour="questions-locked">
-          People have already answered this article, so the questions are locked.
-          You can still change the title, header and content.
+          {withQuestions
+            ? 'People have already answered this article, so the questions are locked.'
+            : 'People have already read this article, so you can no longer add questions.'}
+          {' '}You can still change the title, header and content.
         </p>
-      ) : (
+      ) : withQuestions ? (
         <p className="muted">
           Add 1 to {config.maxQuestions} questions of any type. Choice and short-answer questions are scored when you mark the
           correct answer; other types (rating, scale, grid, date, file…) are collected for you to review.
         </p>
+      ) : (
+        <p className="muted">
+          Article only — readers just read it and click “I have read this article”. Reading time is still tracked.
+        </p>
       )}
 
-      <QuestionBuilder
-        questions={questions}
-        setQuestions={setQuestions}
-        quizTitle={quizTitle}
-        setQuizTitle={setQuizTitle}
-        quizNote={quizNote}
-        setQuizNote={setQuizNote}
-        config={config}
-        locked={locked}
-      />
+      {withQuestions && (
+        <QuestionBuilder
+          questions={questions}
+          setQuestions={setQuestions}
+          quizTitle={quizTitle}
+          setQuizTitle={setQuizTitle}
+          quizNote={quizNote}
+          setQuizNote={setQuizNote}
+          config={config}
+          locked={locked}
+        />
+      )}
 
       <div className="form-foot">
         <button className="btn primary" disabled={saving}>{saving ? 'Saving…' : 'Save article'}</button>

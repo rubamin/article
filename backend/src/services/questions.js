@@ -79,7 +79,8 @@ function cleanSettings(type, s = {}) {
 }
 
 function validateQuestions(questions) {
-  if (!Array.isArray(questions) || questions.length < 1) return 'Add at least one question.';
+  // An empty list is allowed: the article is shared for reading only, without questions.
+  if (!Array.isArray(questions)) return 'Questions must be a list.';
   if (questions.length > MAX_QUESTIONS) return `You can add at most ${MAX_QUESTIONS} questions.`;
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i];

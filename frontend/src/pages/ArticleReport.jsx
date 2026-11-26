@@ -78,7 +78,7 @@ function RecipientDetail({ recipientId }) {
       <div>
         <h4>Answers</h4>
         {data.answers.length === 0 ? (
-          <p className="muted">No answers submitted yet.</p>
+          <p className="muted">{data.submitted ? 'Marked as read (this article has no questions).' : 'No answers submitted yet.'}</p>
         ) : (
           <ol className="answers">
             {data.answers.map((a) => (

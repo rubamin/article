@@ -477,6 +477,7 @@ router.get('/recipients/:rid', ah(async (req, res) => {
       awaySeconds: s.AwaySeconds, awayCount: s.AwayCount,
       maxScrollPct: s.MaxScrollPct, userAgent: s.UserAgent,
     })),
+    submitted: !!responseId,
     answers,
   });
 }));
