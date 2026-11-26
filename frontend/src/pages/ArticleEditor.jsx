@@ -238,7 +238,7 @@ export default function ArticleEditor() {
         </p>
       ) : (
         <p className="muted">
-          Article only — readers just read it and click “I have read this article”. Reading time is still tracked.
+          Article only — readers just read it; there is nothing to answer. Reading time is still tracked, and the Answers column in the report shows NA.
         </p>
       )}
 

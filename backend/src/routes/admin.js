@@ -164,14 +164,15 @@ router.get('/articles', ah(async (req, res) => {
          WHERE r.ArticleId = a.ArticleId) AS Opened,
       (SELECT COUNT(*) FROM dbo.ArticleResponses s
          JOIN dbo.ArticleRecipients r ON r.RecipientId = s.RecipientId
-         WHERE r.ArticleId = a.ArticleId) AS Submitted
+         WHERE r.ArticleId = a.ArticleId) AS Submitted,
+      (SELECT COUNT(*) FROM dbo.ArticleQuestions q WHERE q.ArticleId = a.ArticleId) AS QuestionCount
     FROM dbo.Articles a
     WHERE a.CreatedBy = @u
     ORDER BY a.CreatedAt DESC`);
   res.json(r.recordset.map((x) => ({
     articleId: x.ArticleId, title: x.Title, createdAt: x.CreatedAt,
     shareLink: shareLink(x.ShareToken), shareActive: !!x.IsShareActive,
-    readers: x.Readers, opened: x.Opened, submitted: x.Submitted,
+    readers: x.Readers, opened: x.Opened, submitted: x.Submitted, questionCount: x.QuestionCount,
   })));
 }));
 
@@ -358,8 +359,11 @@ router.get('/articles/:id/report', ah(async (req, res) => {
     WHERE r.ArticleId = @a
     ORDER BY COALESCE(s.LastOpenedAt, r.CreatedAt) DESC`);
 
+  const q = await pool.request().input('a', sql.Int, id)
+    .query('SELECT COUNT(*) AS N FROM dbo.ArticleQuestions WHERE ArticleId = @a');
+
   res.json({
-    article: meta(a),
+    article: { ...meta(a), questionCount: q.recordset[0].N }, // 0 = article only, answers are NA
     recipients: r.recordset.map((x) => ({
       recipientId: x.RecipientId,
       name: x.EmployeeName,
@@ -477,7 +481,8 @@ router.get('/recipients/:rid', ah(async (req, res) => {
       awaySeconds: s.AwaySeconds, awayCount: s.AwayCount,
       maxScrollPct: s.MaxScrollPct, userAgent: s.UserAgent,
     })),
-    submitted: !!responseId,
+    hasQuestions: (await pool.request().input('a', sql.Int, articleId)
+      .query('SELECT COUNT(*) AS N FROM dbo.ArticleQuestions WHERE ArticleId = @a')).recordset[0].N > 0,
     answers,
   });
 }));

@@ -78,7 +78,7 @@ function RecipientDetail({ recipientId }) {
       <div>
         <h4>Answers</h4>
         {data.answers.length === 0 ? (
-          <p className="muted">{data.submitted ? 'Marked as read (this article has no questions).' : 'No answers submitted yet.'}</p>
+          <p className="muted">{data.hasQuestions === false ? 'NA — this article has no questions.' : 'No answers submitted yet.'}</p>
         ) : (
           <ol className="answers">
             {data.answers.map((a) => (
@@ -167,6 +167,7 @@ export default function ArticleReport() {
   const rs = report.recipients;
   const opened = rs.filter((r) => r.openCount > 0);
   const submitted = rs.filter((r) => r.submittedAt);
+  const noQuestions = article.questionCount === 0; // article only: answers are NA
   const totalOpens = rs.reduce((s, r) => s + r.openCount, 0);
   const avgReading = opened.length ? opened.reduce((s, r) => s + r.totalActiveSeconds, 0) / opened.length : 0;
   const avgAway = opened.length ? opened.reduce((s, r) => s + r.totalAwaySeconds, 0) / opened.length : 0;
@@ -197,7 +198,7 @@ export default function ArticleReport() {
         <div><dt>Avg. time on page</dt><dd>{formatDuration(avgReading)}</dd></div>
         <div><dt>Avg. time away</dt><dd>{formatDuration(avgAway)}</dd></div>
         <div><dt>Avg. times left</dt><dd>{opened.length ? avgLeaves.toFixed(1).replace(/\.0$/, '') : '—'}</dd></div>
-        <div><dt>Answered</dt><dd>{submitted.length}</dd></div>
+        <div><dt>Answered</dt><dd>{noQuestions ? 'NA' : submitted.length}</dd></div>
       </dl>
       {error && <p className="error">{error}</p>}
 
@@ -240,7 +241,9 @@ export default function ArticleReport() {
                       <td className="num">{r.totalAwayCount ? `${r.totalAwayCount}×` : '—'}</td>
                       <td className="num">{r.openCount ? `${r.maxScrollPct}%` : '—'}</td>
                       <td>
-                        {r.submittedAt
+                        {noQuestions
+                          ? <span className="muted">NA</span>
+                          : r.submittedAt
                           ? <span className="pill done">{r.mcqTotal ? `${r.mcqCorrect}/${r.mcqTotal} correct` : 'Submitted'}</span>
                           : <span className="pill">Pending</span>}
                       </td>

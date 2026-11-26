@@ -55,7 +55,7 @@ export default function ArticleList() {
                   </td>
                   <td className="num">{r.readers}</td>
                   <td className="num">{r.opened}</td>
-                  <td className="num">{r.submitted}</td>
+                  <td className="num">{r.questionCount === 0 ? <span className="muted">NA</span> : r.submitted}</td>
                   <td className="actions" data-tour="row-actions">
                     <Link to={`/admin/articles/${r.articleId}/view`}>View</Link>
                     <Link to={`/admin/articles/${r.articleId}`}>Report</Link>
